@@ -3,4 +3,4 @@ project(IMS_Bakery)
 
 set(CMAKE_CXX_STANDARD 11)
 
-add_executable(IMS_Bakery main.cpp)
+add_executable(IMS_Bakery Bakery.cpp)
