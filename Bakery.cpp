@@ -1,7 +1,5 @@
 #include <iostream>
 
-#define I_REALLY_KNOW_HOW_TO_USE_WAITUNTIL
-
 #include "simlib.h"
 
 bool doBreadAsNext;
@@ -24,7 +22,7 @@ Store bapDoughsWaiting(10);
 Store breadsDone("Number of done breads", 100);
 Store rollsDone("Number of done rolls", 100);
 Store bapsDone("Number of done baps", 10);
-Store furnace(2);
+Store furnace(4);
 
 class BapDoughImport : public Process {
     void Behavior() override {
@@ -224,6 +222,7 @@ class WorkerBWork : public Process {
                 (new BakingRolls)->Activate();
                 goto doBWorking;
             } else if (!furnace.Full() && BakeBap.Busy() && bapDoughsWaiting.Used() > 0) {
+                Leave(bapDoughsWaiting, 1);
                 Release(BakeBap);
                 Seize(BakeBread);
                 Enter(furnace, 1);
