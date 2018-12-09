@@ -1,3 +1,10 @@
+/**
+ * @file Bakery.cpp
+ * @author Petr Sopf (xsopfp00)
+ * @author Jan Bartosek (xbarto92)
+ * @brief Main program file, contains definitions of all functions and program logic
+ */
+
 #include <iostream>
 
 #include "simlib.h"
@@ -9,17 +16,18 @@ bool isWorkerAShiftOver;
 bool isWorkerBShiftOver;
 bool isBapDoughImportWaiting;
 
-bool isBakedBreadWaiting;
-bool isBakedRollWaiting;
-bool isBakedBapWaiting;
-
-Facility BakeBread("Baking bread");
-Facility BakeRolls("Baking rolls");
-Facility BakeBap("Baking bap");
+Facility bakeBread("Baking bread");
+Facility bakeRolls("Baking rolls");
+Facility bakeBap("Baking bap");
 
 Store breadDoughsWaiting(100);
 Store rollsDoughsWaiting(100);
 Store bapDoughsWaiting(10);
+
+Store bakedBreadWaiting(100);
+Store bakedRollsWaiting(100);
+Store bakedBapsWaiting(10);
+
 Store furnace(4);
 
 long breadsDone = 0;
@@ -39,7 +47,7 @@ class BakingBread : public Process {
     void Behavior() override {
         Wait(45);
         //Baking of bread is completed
-        isBakedBreadWaiting = true;
+        Enter(bakedBreadWaiting, 1);
     }
 };
 
@@ -47,7 +55,7 @@ class BakingRolls : public Process {
     void Behavior() override {
         Wait(13);
         //Baking of roll is completed
-        isBakedRollWaiting = true;
+        Enter(bakedRollsWaiting, 1);
     }
 };
 
@@ -55,7 +63,7 @@ class BakingBap : public Process {
     void Behavior() override {
         Wait(5);
         //Baking of bap is completed
-        isBakedBapWaiting = true;
+        Enter(bakedBapsWaiting, 1);
     }
 };
 
@@ -161,27 +169,27 @@ class WorkerBWork : public Process {
         printf("Worker B začala směna\n");
         isWorkerBShiftOver = false;
 
-        Seize(BakeBread);
+        Seize(bakeBread);
 
         doBWorking:
-        if (isBakedBreadWaiting) {
-            isBakedBreadWaiting = false;
+        if (bakedBreadWaiting.Used() > 0) {
+            Leave(bakedBreadWaiting, 1);
             printf("Worker B jde vytáhnout chléb z pece.\n");
             Wait(0.5);
             breadsDone += 1;
             Leave(furnace, 1);
             printf("Chléb je na prodejně.\n");
             goto doBWorking;
-        } else if (isBakedRollWaiting) {
-            isBakedRollWaiting = false;
+        } else if (bakedRollsWaiting.Used() > 0) {
+            Leave(bakedRollsWaiting, 1);
             printf("Worker B jde vytáhnout rohlíky z pece.\n");
             Wait(0.5);
             rollsDone += 1;
             Leave(furnace, 1);
             printf("Rohlíky jsou na prodejně.\n");
             goto doBWorking;
-        } else if (isBakedBapWaiting) {
-            isBakedBapWaiting = false;
+        } else if (bakedBapsWaiting.Used() > 0) {
+            Leave(bakedBapsWaiting, 1);
             printf("Worker B jde vytáhnout kaiserky z pece.\n");
             Wait(0.5);
             bapsDone += 1;
@@ -202,10 +210,10 @@ class WorkerBWork : public Process {
             printf("Worker B uložil kaiserky do mrazáku.\n");
             goto doBWorking;
         } else if (!isWorkerBShiftOver) {
-            if (!furnace.Full() && BakeBread.Busy() && breadDoughsWaiting.Used() > 0) {
+            if (!furnace.Full() && bakeBread.Busy() && breadDoughsWaiting.Used() > 0) {
                 Leave(breadDoughsWaiting, 1);
-                Release(BakeBread);
-                Seize(BakeRolls);
+                Release(bakeBread);
+                Seize(bakeRolls);
                 Enter(furnace, 1);
 
                 printf("Worker B jde péct chléb.\n");
@@ -213,10 +221,10 @@ class WorkerBWork : public Process {
 
                 (new BakingBread)->Activate();
                 goto doBWorking;
-            } else if (!furnace.Full() && BakeRolls.Busy() && rollsDoughsWaiting.Used() > 0) {
+            } else if (!furnace.Full() && bakeRolls.Busy() && rollsDoughsWaiting.Used() > 0) {
                 Leave(rollsDoughsWaiting, 1);
-                Release(BakeRolls);
-                Seize(BakeBap);
+                Release(bakeRolls);
+                Seize(bakeBap);
                 Enter(furnace, 1);
 
                 printf("Worker B jde péct rohlíky.\n");
@@ -224,10 +232,10 @@ class WorkerBWork : public Process {
 
                 (new BakingRolls)->Activate();
                 goto doBWorking;
-            } else if (!furnace.Full() && BakeBap.Busy() && bapDoughsWaiting.Used() > 0) {
+            } else if (!furnace.Full() && bakeBap.Busy() && bapDoughsWaiting.Used() > 0) {
                 Leave(bapDoughsWaiting, 1);
-                Release(BakeBap);
-                Seize(BakeBread);
+                Release(bakeBap);
+                Seize(bakeBread);
                 Enter(furnace, 1);
 
                 printf("Worker B jde péct kaiserky.\n");
@@ -239,15 +247,15 @@ class WorkerBWork : public Process {
                 printf("Worker B nemá co péct.\n");
                 Wait(5);
 
-                if (BakeBread.Busy()) {
-                    Release(BakeBread);
-                    Seize(BakeRolls);
-                } else if (BakeRolls.Busy()) {
-                    Release(BakeRolls);
-                    Seize(BakeBap);
-                } else if (BakeBap.Busy()) {
-                    Release(BakeBap);
-                    Seize(BakeBread);
+                if (bakeBread.Busy()) {
+                    Release(bakeBread);
+                    Seize(bakeRolls);
+                } else if (bakeRolls.Busy()) {
+                    Release(bakeRolls);
+                    Seize(bakeBap);
+                } else if (bakeBap.Busy()) {
+                    Release(bakeBap);
+                    Seize(bakeBread);
                 }
 
                 goto doBWorking;
@@ -267,13 +275,13 @@ class WorkingShift : public Process {
         furnace.Clear();
 
         isBapDoughImportWaiting = false;
-        isBakedBreadWaiting = false;
-        isBakedRollWaiting = false;
-        isBakedBapWaiting = false;
+        bakedBreadWaiting.Clear();
+        bakedRollsWaiting.Clear();
+        bakedBapsWaiting.Clear();
 
-        BakeBread.Clear();
-        BakeRolls.Clear();
-        BakeBap.Clear();
+        bakeBread.Clear();
+        bakeRolls.Clear();
+        bakeBap.Clear();
 
         //Start shift for A worker
         (new WorkerAWork)->Activate();
@@ -298,6 +306,7 @@ class WorkingShift : public Process {
         isWorkerBShiftOver = true;
         printf("Worker B skončila směna\n");
 
+        //15 hours until another shift
         Wait(15 * 60);
 
         --numberOfShifts;
