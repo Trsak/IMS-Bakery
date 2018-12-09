@@ -2,9 +2,11 @@
 
 #include "simlib.h"
 
+long numberOfShifts;
+
 bool doBreadAsNext;
 bool isWorkerAShiftOver;
-bool isWorkerBShiftOver = false;
+bool isWorkerBShiftOver;
 bool isBapDoughImportWaiting;
 
 bool isBakedBreadWaiting;
@@ -14,15 +16,15 @@ bool isBakedBapWaiting;
 Facility BakeBread("Baking bread");
 Facility BakeRolls("Baking rolls");
 Facility BakeBap("Baking bap");
-Facility CanNotBake("Can not bake anything");
 
 Store breadDoughsWaiting(100);
 Store rollsDoughsWaiting(100);
 Store bapDoughsWaiting(10);
-Store breadsDone("Number of done breads", 100);
-Store rollsDone("Number of done rolls", 100);
-Store bapsDone("Number of done baps", 10);
 Store furnace(4);
+
+long breadsDone = 0;
+long rollsDone = 0;
+long bapsDone = 0;
 
 class BapDoughImport : public Process {
     void Behavior() override {
@@ -80,6 +82,7 @@ class RollsDoughDries : public Process {
 class WorkerAWork : public Process {
     void Behavior() override {
         printf("Worker A začala směna\n");
+        isWorkerAShiftOver = false;
         doBreadAsNext = true;
 
         doAWorking:
@@ -165,7 +168,7 @@ class WorkerBWork : public Process {
             isBakedBreadWaiting = false;
             printf("Worker B jde vytáhnout chléb z pece.\n");
             Wait(0.5);
-            Enter(breadsDone, 1);
+            breadsDone += 1;
             Leave(furnace, 1);
             printf("Chléb je na prodejně.\n");
             goto doBWorking;
@@ -173,7 +176,7 @@ class WorkerBWork : public Process {
             isBakedRollWaiting = false;
             printf("Worker B jde vytáhnout rohlíky z pece.\n");
             Wait(0.5);
-            Enter(rollsDone, 1);
+            rollsDone += 1;
             Leave(furnace, 1);
             printf("Rohlíky jsou na prodejně.\n");
             goto doBWorking;
@@ -181,7 +184,7 @@ class WorkerBWork : public Process {
             isBakedBapWaiting = false;
             printf("Worker B jde vytáhnout kaiserky z pece.\n");
             Wait(0.5);
-            Enter(bapsDone, 1);
+            bapsDone += 1;
             Leave(furnace, 1);
             printf("Kaiserky jsou na prodejně.\n");
             goto doBWorking;
@@ -234,7 +237,19 @@ class WorkerBWork : public Process {
                 goto doBWorking;
             } else {
                 printf("Worker B nemá co péct.\n");
-                Wait(4);
+                Wait(5);
+
+                if (BakeBread.Busy()) {
+                    Release(BakeBread);
+                    Seize(BakeRolls);
+                } else if (BakeRolls.Busy()) {
+                    Release(BakeRolls);
+                    Seize(BakeBap);
+                } else if (BakeBap.Busy()) {
+                    Release(BakeBap);
+                    Seize(BakeBread);
+                }
+
                 goto doBWorking;
             }
         } else {
@@ -245,16 +260,22 @@ class WorkerBWork : public Process {
 
 class WorkingShift : public Process {
     void Behavior() override {
+        startShift:
         breadDoughsWaiting.Clear();
         rollsDoughsWaiting.Clear();
         bapDoughsWaiting.Clear();
-        breadsDone.Clear();
-        rollsDone.Clear();
-        bapsDone.Clear();
+        furnace.Clear();
+
         isBapDoughImportWaiting = false;
+        isBakedBreadWaiting = false;
+        isBakedRollWaiting = false;
+        isBakedBapWaiting = false;
+
+        BakeBread.Clear();
+        BakeRolls.Clear();
+        BakeBap.Clear();
 
         //Start shift for A worker
-        isWorkerAShiftOver = false;
         (new WorkerAWork)->Activate();
 
         //Later shift start for worker B
@@ -276,16 +297,41 @@ class WorkingShift : public Process {
         //End of shift for worker B
         isWorkerBShiftOver = true;
         printf("Worker B skončila směna\n");
+
+        Wait(15 * 60);
+
+        --numberOfShifts;
+        if (numberOfShifts > 0) {
+            goto startShift;
+        }
     }
 };
 
-int main() {
+int main(int argc, char **argv) {
+    if (argc > 2) {
+        fprintf(stderr, "ERROR: Too many arguments!\n");
+        exit(EXIT_FAILURE);
+    }
+
+    char *p;
+    numberOfShifts = strtol(argv[1], &p, 10);
+    long numberOfShiftsPre = numberOfShifts;
+
+    if (*p || numberOfShifts < 1) {
+        fprintf(stderr, "ERROR: First argument can only be integer bigger then zero!\n");
+        exit(EXIT_FAILURE);
+    }
+
     Init(0);
     (new WorkingShift)->Activate();
     Run();
 
-    breadsDone.Output();
-    rollsDone.Output();
-    bapsDone.Output();
+    printf("==================== Pekárna ====================\n");
+    printf("Simulováno směn: %ld\n", numberOfShiftsPre);
+    printf("Upečeno várek chleba: %ld (průměr %.2f na směnu)\n", breadsDone,
+           breadsDone * 1.0 / numberOfShiftsPre * 1.0);
+    printf("Upečeno várek rohlíků: %ld (průměr %.2f na směnu)\n", rollsDone, rollsDone * 1.0 / numberOfShiftsPre * 1.0);
+    printf("Upečeno várek kaiserek: %ld (průměr %.2f na směnu)\n", bapsDone, bapsDone * 1.0 / numberOfShiftsPre * 1.0);
+    printf("=================================================\n");
     return 0;
 }

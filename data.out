@@ -1,4 +1,4 @@
-Začala směna
+Worker A začala směna
 Worker A jde připravovat chleba.
 Worker A zvážil chleba.
 Worker A zapnul mixér na těsto chleba.
@@ -21,24 +21,46 @@ Worker A jde připravovat chleba.
 Worker A zvážil chleba.
 Worker A zapnul mixér na těsto chleba.
 Těsto na chleba dokynulo.
+Worker B začala směna
+Worker B jde péct chléb.
+Worker B nemá co péct.
 Mixér dodělal těsto na chleba.
 Worker A udělal těsto na chleba.
+Worker B nemá co péct.
 Worker A dal těsto do kynárny.
 Worker A jde připravovat rohlíky.
 Worker A zapnul mixér na těsto rohlíku.
 Těsto na rohlíky dokynulo.
+Worker B jde péct rohlíky.
+Worker B nemá co péct.
 Přijel dovoz kaiserek.
+Worker B přebírá zásilku kaiserek.
 Těsto na rohlíky je hotovo.
 Worker A jde připravovat chleba.
+Worker B převzal zasílku kaiserek.
 Worker A zvážil chleba.
 Worker A zapnul mixér na těsto chleba.
+Worker B uložil kaiserky do mrazáku.
+Worker B jde péct kaiserky.
+Worker B nemá co péct.
 Těsto na chleba dokynulo.
+Worker B jde vytáhnout rohlíky z pece.
+Rohlíky jsou na prodejně.
+Worker B jde vytáhnout kaiserky z pece.
+Kaiserky jsou na prodejně.
+Worker B jde péct chléb.
+Worker B nemá co péct.
 Mixér dodělal těsto na chleba.
 Worker A udělal těsto na chleba.
 Worker A dal těsto do kynárny.
 Worker A jde připravovat rohlíky.
 Worker A zapnul mixér na těsto rohlíku.
+Worker B jde péct kaiserky.
+Worker B nemá co péct.
 Těsto na rohlíky dokynulo.
+Worker B jde péct rohlíky.
+Worker B jde vytáhnout kaiserky z pece.
+Kaiserky jsou na prodejně.
 Těsto na rohlíky je hotovo.
 Worker A jde připravovat chleba.
 Worker A zvážil chleba.
@@ -212,4 +234,31 @@ Těsto na rohlíky dokynulo.
 Těsto na chleba dokynulo.
 Těsto na rohlíky dokynulo.
 Worker B skončila směna
-Celkem těsta: 19 19
++----------------------------------------------------------+
+| STORE Number of done breads                              |
++----------------------------------------------------------+
+|  Capacity = 100  (0 used, 100 free)                      |
++----------------------------------------------------------+
+
++----------------------------------------------------------+
+| STORE Number of done rolls                               |
++----------------------------------------------------------+
+|  Capacity = 100  (1 used, 99 free)                       |
+|  Time interval = 0 - 1e+30                               |
+|  Number of Enter operations = 1                          |
+|  Minimal used capacity = 1                               |
+|  Maximal used capacity = 1                               |
+|  Average used capacity = 1                               |
++----------------------------------------------------------+
+
++----------------------------------------------------------+
+| STORE Number of done baps                                |
++----------------------------------------------------------+
+|  Capacity = 10  (2 used, 8 free)                         |
+|  Time interval = 0 - 1e+30                               |
+|  Number of Enter operations = 2                          |
+|  Minimal used capacity = 1                               |
+|  Maximal used capacity = 2                               |
+|  Average used capacity = 2                               |
++----------------------------------------------------------+
+

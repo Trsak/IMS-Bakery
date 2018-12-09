@@ -23,5 +23,8 @@ $(EXEC) : $(OBJFILES)
 clean:
 	$(RM) *.o
 
+run:
+	./$(EXEC) 10
+
 cleanall: clean
 	$(RM) $(EXEC)
