@@ -9,42 +9,63 @@
 
 #include "simlib.h"
 
-long numberOfShifts;
+//Number of shifts to be simulated
+long numberOfShifts = 10;
+//Number of furnaces to be used
+long numberOfFurnaces = 4;
 
+//Indicates, if Worker A should do bread as next
 bool doBreadAsNext;
+//Indicates, if Worker's A shift is over
 bool isWorkerAShiftOver;
+//Indicates, if Worker's B shift is over
 bool isWorkerBShiftOver;
+//Indicates, if import of baps is waiting
 bool isBapDoughImportWaiting;
 
+//Facility for baking bread
 Facility bakeBread("Baking bread");
+//Facility for baking rolls
 Facility bakeRolls("Baking rolls");
+//Facility for baking baps
 Facility bakeBap("Baking bap");
 
+//Store for all bread doughs waiting to be baked
 Store breadDoughsWaiting(100);
+//Store for all rolls doughs waiting to be baked
 Store rollsDoughsWaiting(100);
+//Store for all bap doughs waiting to be baked
 Store bapDoughsWaiting(10);
 
+//Store for all baked breads waiting to be pulled out of furnaces
 Store bakedBreadWaiting(100);
+//Store for all baked rolls waiting to be pulled out of furnaces
 Store bakedRollsWaiting(100);
+//Store for all baked baps waiting to be pulled out of furnaces
 Store bakedBapsWaiting(10);
 
+//Store of furnaces
 Store furnace(4);
 
+//Number of total breads done
 long breadsDone = 0;
+//Number of total rolls done
 long rollsDone = 0;
+//Number of total baps done
 long bapsDone = 0;
 
 class BapDoughImport : public Process {
     void Behavior() override {
+        //Import arrives in exp(2 hours)
         Wait(Exponential(2 * 60));
         //Arrival of dough import
         isBapDoughImportWaiting = true;
-        printf("Přijel dovoz kaiserek.\n");
     }
 };
 
 class BakingBread : public Process {
     void Behavior() override {
+        //Bread is baking for 45 minutes
         Wait(45);
         //Baking of bread is completed
         Enter(bakedBreadWaiting, 1);
@@ -53,6 +74,7 @@ class BakingBread : public Process {
 
 class BakingRolls : public Process {
     void Behavior() override {
+        //Rolls are baking for 13 minutes
         Wait(13);
         //Baking of roll is completed
         Enter(bakedRollsWaiting, 1);
@@ -61,6 +83,7 @@ class BakingRolls : public Process {
 
 class BakingBap : public Process {
     void Behavior() override {
+        //Baps are baking for 5 minutes
         Wait(5);
         //Baking of bap is completed
         Enter(bakedBapsWaiting, 1);
@@ -69,27 +92,24 @@ class BakingBap : public Process {
 
 class BreadDoughDries : public Process {
     void Behavior() override {
-        //Bread doug dries
+        //Bread doug dries for 45 minutes
         Wait(45);
-        printf("Těsto na chleba dokynulo.\n");
-
+        //Bread dough dries completed
         Enter(breadDoughsWaiting, 1);
     }
 };
 
 class RollsDoughDries : public Process {
     void Behavior() override {
-        //Bread doug dries
+        //Rolls doug dries for 45 minutes
         Wait(45);
-        printf("Těsto na rohlíky dokynulo.\n");
-
+        //Rolls dough dries completed
         Enter(rollsDoughsWaiting, 1);
     }
 };
 
 class WorkerAWork : public Process {
     void Behavior() override {
-        printf("Worker A začala směna\n");
         isWorkerAShiftOver = false;
         doBreadAsNext = true;
 
@@ -98,24 +118,18 @@ class WorkerAWork : public Process {
             if (doBreadAsNext) { //Let's start making bread
                 //Worker will do rolls as next
                 doBreadAsNext = false;
-                printf("Worker A jde připravovat chleba.\n");
 
                 //Weighting raw materials
                 Wait(Uniform(3, 5));
-                printf("Worker A zvážil chleba.\n");
 
                 //Mixer is mixing for 9 minutes
-                printf("Worker A zapnul mixér na těsto chleba.\n");
                 Wait(9);
-                printf("Mixér dodělal těsto na chleba.\n");
 
                 //Make bread dough
                 Wait(Uniform(60, 80) / 60);
-                printf("Worker A udělal těsto na chleba.\n");
 
                 //Bread dough in kennel
                 Wait(0.5);
-                printf("Worker A dal těsto do kynárny.\n");
 
                 //Dough dries
                 (new BreadDoughDries)->Activate();
@@ -126,13 +140,8 @@ class WorkerAWork : public Process {
                 //We will wo bread as next
                 doBreadAsNext = true;
 
-                printf("Worker A jde připravovat rohlíky.\n");
-
                 //Weighting raw materials
                 Wait(1);
-
-                //Start mixer
-                printf("Worker A zapnul mixér na těsto rohlíku.\n");
 
                 //Mixer is mixing for 9 minutes
                 Wait(9);
@@ -146,17 +155,12 @@ class WorkerAWork : public Process {
                 //Bread dough in kennel
                 Wait(0.5);
 
-                //Release Worker A
-                printf("Těsto na rohlíky je hotovo.\n");
-
                 //Dough dries
                 (new RollsDoughDries)->Activate();
 
                 //Worker is going to look for another this to do
                 goto doAWorking;
             }
-        } else {
-            printf("Worker A ukončil směnu.\n");
         }
     };
 };
@@ -166,86 +170,86 @@ class WorkerBWork : public Process {
     void Behavior() override {
         //Wait one hour before starting
         Wait(60);
-        printf("Worker B začala směna\n");
+
         isWorkerBShiftOver = false;
 
         Seize(bakeBread);
 
         doBWorking:
-        if (bakedBreadWaiting.Used() > 0) {
+        if (bakedBreadWaiting.Used() > 0) { //Baked bread is waiting to be pulled out of furnace
             Leave(bakedBreadWaiting, 1);
-            printf("Worker B jde vytáhnout chléb z pece.\n");
+
             Wait(0.5);
             breadsDone += 1;
             Leave(furnace, 1);
-            printf("Chléb je na prodejně.\n");
+
             goto doBWorking;
-        } else if (bakedRollsWaiting.Used() > 0) {
+        } else if (bakedRollsWaiting.Used() > 0) { //Baked rolls are waiting to be pulled out of furnace
             Leave(bakedRollsWaiting, 1);
-            printf("Worker B jde vytáhnout rohlíky z pece.\n");
+
             Wait(0.5);
             rollsDone += 1;
             Leave(furnace, 1);
-            printf("Rohlíky jsou na prodejně.\n");
+
             goto doBWorking;
-        } else if (bakedBapsWaiting.Used() > 0) {
+        } else if (bakedBapsWaiting.Used() > 0) { //Baked baps are waiting to be pulled out of furnace
             Leave(bakedBapsWaiting, 1);
-            printf("Worker B jde vytáhnout kaiserky z pece.\n");
+
             Wait(0.5);
             bapsDone += 1;
             Leave(furnace, 1);
-            printf("Kaiserky jsou na prodejně.\n");
+
             goto doBWorking;
         } else if (isBapDoughImportWaiting) {
             isBapDoughImportWaiting = false;
 
             //Picking dough up delivery
-            printf("Worker B přebírá zásilku kaiserek.\n");
             Wait(Uniform(1, 2));
 
-            printf("Worker B převzal zasílku kaiserek.\n");
             Wait(3);
 
             Enter(bapDoughsWaiting, 5);
-            printf("Worker B uložil kaiserky do mrazáku.\n");
+
             goto doBWorking;
-        } else if (!isWorkerBShiftOver) {
-            if (!furnace.Full() && bakeBread.Busy() && breadDoughsWaiting.Used() > 0) {
+        }
+        if (isWorkerBShiftOver) { //Worker shift is over
+            if (!furnace.Empty()) { //Worker must wait for everything to ba baked
+                Wait(5);
+                goto doBWorking;
+            }
+        } else {
+            if (!furnace.Full() && bakeBread.Busy() && breadDoughsWaiting.Used() > 0) { //If there is available furnace and bread dough
                 Leave(breadDoughsWaiting, 1);
                 Release(bakeBread);
                 Seize(bakeRolls);
                 Enter(furnace, 1);
 
-                printf("Worker B jde péct chléb.\n");
                 Wait(1);
 
                 (new BakingBread)->Activate();
                 goto doBWorking;
-            } else if (!furnace.Full() && bakeRolls.Busy() && rollsDoughsWaiting.Used() > 0) {
+            } else if (!furnace.Full() && bakeRolls.Busy() && rollsDoughsWaiting.Used() > 0) { //If there is available furnace and rolls dough
                 Leave(rollsDoughsWaiting, 1);
                 Release(bakeRolls);
                 Seize(bakeBap);
                 Enter(furnace, 1);
 
-                printf("Worker B jde péct rohlíky.\n");
                 Wait(1);
 
                 (new BakingRolls)->Activate();
                 goto doBWorking;
-            } else if (!furnace.Full() && bakeBap.Busy() && bapDoughsWaiting.Used() > 0) {
+            } else if (!furnace.Full() && bakeBap.Busy() && bapDoughsWaiting.Used() > 0) { //If there is available furnace and baps dough
                 Leave(bapDoughsWaiting, 1);
                 Release(bakeBap);
                 Seize(bakeBread);
                 Enter(furnace, 1);
 
-                printf("Worker B jde péct kaiserky.\n");
                 Wait(1);
 
                 (new BakingBap)->Activate();
                 goto doBWorking;
-            } else {
-                printf("Worker B nemá co péct.\n");
-                Wait(5);
+            } else { //Current pastry can not be make, try to make another one
+                Wait(1);
 
                 if (bakeBread.Busy()) {
                     Release(bakeBread);
@@ -260,8 +264,6 @@ class WorkerBWork : public Process {
 
                 goto doBWorking;
             }
-        } else {
-            printf("Worker B ukončil směnu.\n");
         }
     }
 };
@@ -269,10 +271,12 @@ class WorkerBWork : public Process {
 class WorkingShift : public Process {
     void Behavior() override {
         startShift:
+        //Start of shift, clear everything
         breadDoughsWaiting.Clear();
         rollsDoughsWaiting.Clear();
         bapDoughsWaiting.Clear();
         furnace.Clear();
+        furnace.SetCapacity(static_cast<unsigned long>(numberOfFurnaces));
 
         isBapDoughImportWaiting = false;
         bakedBreadWaiting.Clear();
@@ -292,55 +296,71 @@ class WorkingShift : public Process {
         //Bap dough import
         (new BapDoughImport)->Activate();
 
-        //Eight hours of shift
-        Wait(8 * 60);
+        //six hours of shift for worker A
+        Wait(6 * 60);
 
         //End of shift for worker A
         isWorkerAShiftOver = true;
-        printf("Worker A skončila směna\n");
 
-        //An hour left for Worker B
-        Wait(60);
+        //3 hours left for Worker B
+        Wait(3 * 60);
 
         //End of shift for worker B
         isWorkerBShiftOver = true;
-        printf("Worker B skončila směna\n");
 
         //15 hours until another shift
         Wait(15 * 60);
 
         --numberOfShifts;
         if (numberOfShifts > 0) {
+            //Goto next shift
             goto startShift;
         }
     }
 };
 
 int main(int argc, char **argv) {
-    if (argc > 2) {
+    if (argc > 3) {
+        //check for too many arguments
         fprintf(stderr, "ERROR: Too many arguments!\n");
         exit(EXIT_FAILURE);
     }
 
     char *p;
-    numberOfShifts = strtol(argv[1], &p, 10);
-    long numberOfShiftsPre = numberOfShifts;
+    long numberOfShiftsPre = 10;
 
-    if (*p || numberOfShifts < 1) {
-        fprintf(stderr, "ERROR: First argument can only be integer bigger then zero!\n");
-        exit(EXIT_FAILURE);
+    if (argc > 1) { //Parse number of shifts argument
+        numberOfShifts = strtol(argv[1], &p, 10);
+        numberOfShiftsPre = numberOfShifts;
+
+        if (*p || numberOfShifts < 1) {
+            fprintf(stderr, "ERROR: First argument (number of shifts) can only be integer bigger then zero!\n");
+            exit(EXIT_FAILURE);
+        }
+    }
+
+    if (argc > 2) { //Parse number of furnaces argument
+        numberOfFurnaces = strtol(argv[2], &p, 10);
+
+        if (*p || numberOfShifts < 1) {
+            fprintf(stderr, "ERROR: Second argument (number of furnaces) can only be integer bigger then zero!\n");
+            exit(EXIT_FAILURE);
+        }
     }
 
     Init(0);
     (new WorkingShift)->Activate();
     Run();
 
-    printf("==================== Pekárna ====================\n");
-    printf("Simulováno směn: %ld\n", numberOfShiftsPre);
-    printf("Upečeno várek chleba: %ld (průměr %.2f na směnu)\n", breadsDone,
+    //Print info
+    printf("==================== Pekarna ====================\n");
+    printf("Simulováno smen: %ld\n", numberOfShiftsPre);
+    printf("Pocet peci: %ld\n", numberOfFurnaces);
+    printf("Upeceno varek chleba: %ld (prumer %.2f na smenu)\n", breadsDone,
            breadsDone * 1.0 / numberOfShiftsPre * 1.0);
-    printf("Upečeno várek rohlíků: %ld (průměr %.2f na směnu)\n", rollsDone, rollsDone * 1.0 / numberOfShiftsPre * 1.0);
-    printf("Upečeno várek kaiserek: %ld (průměr %.2f na směnu)\n", bapsDone, bapsDone * 1.0 / numberOfShiftsPre * 1.0);
+    printf("Upeceno varek rohliku: %ld (prumer %.2f na smenu)\n", rollsDone, rollsDone * 1.0 / numberOfShiftsPre * 1.0);
+    printf("Upeceno varek kaiserek: %ld (prumer %.2f na smenu)\n", bapsDone, bapsDone * 1.0 / numberOfShiftsPre * 1.0);
     printf("=================================================\n");
+
     return 0;
 }

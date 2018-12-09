@@ -24,7 +24,7 @@ clean:
 	$(RM) *.o
 
 run:
-	./$(EXEC) 10
+	./$(EXEC) 100 4
 
 cleanall: clean
 	$(RM) $(EXEC)
